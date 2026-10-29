@@ -1,0 +1,39 @@
+@media (min-width: 640px) {
+  .overlay { place-items: center; padding: var(--sp-4); }
+  .modal { border-radius: 24px; padding: var(--sp-5); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .kpis { grid-template-columns: repeat(3, 1fr); }
+  .featured { margin: 0; padding-inline: 0; }
+  .feature-card { width: 320px; }
+}
+@media (min-width: 1024px) {
+  /* Bottom bar becomes a left sidebar; same five destinations, Home on top and emphasized. */
+  .main { margin-left: var(--sidebar-w); max-width: none; padding: var(--sp-6) var(--sp-6) var(--sp-7); }
+  .main > .page, .main > .topbar { max-width: 880px; margin-inline: auto; }
+  .topbar .brand { display: none; }
+  .topbar { justify-content: flex-end; }
+  .bottom-nav {
+    left: 0; top: 0; bottom: 0; transform: none; width: var(--sidebar-w); height: auto; border-radius: 0; border-width: 0 1px 0 0;
+    display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: var(--sp-5) var(--sp-3); gap: 4px; box-shadow: none;
+    background: var(--bg-elev); backdrop-filter: none;
+  }
+  .nav-blob { display: none; }
+  .bottom-nav .nav-brand { display: flex; margin: 0 8px var(--sp-5); order: -2; }
+  .nav-item .label { text-align: left !important; }
+  .bottom-nav .nav-extras .btn { justify-content: flex-start; }
+  .bottom-nav .nav-extras { display: grid; gap: 8px; margin-top: auto; padding: 0 4px; order: 10; }
+  .nav-item { flex-direction: row; justify-content: flex-start; gap: 12px; height: 46px; padding: 0 14px; border-radius: 14px; font-size: var(--fs-md); }
+  .nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .nav-item[aria-current="page"] { background: var(--accent-soft); }
+  .nav-item.is-home { order: -1; height: 56px; margin-bottom: 8px; font-weight: 750; }
+  .nav-home-btn { width: 38px; height: 38px; margin: 0; box-shadow: none; }
+  .nav-home-btn svg { width: 20px; height: 20px; }
+  .nav-item.is-home[aria-current="page"] .nav-home-btn { transform: none; }
+  .nav-item.is-home span.label { margin: 0; }
+  .nav-item.pos-3 { order: 1; } .nav-item.pos-4 { order: 2; } .nav-item.pos-1 { order: 3; } .nav-item.pos-2 { order: 4; }
+  .fab { bottom: 32px; right: 32px; }
+  .toasts { bottom: 32px; left: calc(50% + var(--sidebar-w) / 2); }
+  .quick-links { gap: var(--sp-4); }
+  .kpis { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1200px) { .kpis { grid-template-columns: repeat(6, 1fr); } }

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Student Hub (prototype)</title>
+  <meta name="description" content="Student Hub — a shared academic home for the Computer Science department. Frontend prototype with sample data.">
+  <meta name="theme-color" content="#0a0e16">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+  <script src="/assets/js/theme-init.js"></script>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/pages.css">
+  <link rel="stylesheet" href="/assets/css/responsive.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app" id="app">
+    <nav id="nav"></nav>
+    <main class="main" id="main" tabindex="-1">
+      <div class="topbar">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></span> Student Hub</div>
+        <button class="icon-btn" id="open-settings" aria-label="Open settings" aria-haspopup="dialog"></button>
+      </div>
+      <div id="view" aria-live="polite"></div>
+    </main>
+    <button class="fab" id="fab" hidden></button>
+  </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <noscript><p style="padding:24px">Student Hub needs JavaScript enabled.</p></noscript>
+  <script type="module" src="/assets/js/app.js"></script>
+</body>
+</html>

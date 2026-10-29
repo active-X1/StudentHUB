@@ -1,0 +1,26 @@
+{
+  "name": "student-hub",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Student Hub for a Computer Science department — Phase 3: authentication, sessions and admin lockout on the Express + PostgreSQL foundation.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=20.12" },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "dev:static": "node scripts/static-server.js",
+    "db:migrate": "node src/database/cli.js migrate",
+    "db:status": "node src/database/cli.js status",
+    "db:seed": "node src/database/cli.js seed",
+    "db:reset": "node src/database/cli.js reset --yes",
+    "build:sw": "node scripts/generate-sw.js",
+    "admin:bootstrap": "node src/database/cli.js bootstrap-admin",
+    "test": "node scripts/run-tests.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "helmet": "^8.0.0",
+    "pg": "^8.13.0"
+  }
+}

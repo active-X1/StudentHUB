@@ -1,0 +1,73 @@
+/* Design tokens: colors, type, spacing, radii, shadows. Dark is default; light via [data-theme="light"]. */
+:root {
+  color-scheme: dark;
+  --bg: #0a0e16;
+  --bg-elev: #0f1522;
+  --surface: #131a2a;
+  --surface-2: #1a2336;
+  --surface-3: #232e45;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text: #e9edf6;
+  --text-muted: #9ba7bf;
+  --text-faint: #6f7b94;
+  --accent: #4fd8b8;
+  --accent-ink: #04251d;
+  --accent-soft: rgba(79, 216, 184, 0.14);
+  --accent-2: #8c9bff;
+  --accent-2-soft: rgba(140, 155, 255, 0.16);
+  --danger: #ff7a88;
+  --danger-soft: rgba(255, 122, 136, 0.14);
+  --warn: #ffbe5c;
+  --warn-soft: rgba(255, 190, 92, 0.15);
+  --success: #5fe08f;
+  --success-soft: rgba(95, 224, 143, 0.14);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.25);
+  --shadow-2: 0 10px 40px rgba(0, 0, 0, 0.5);
+  --nav-bg: rgba(19, 26, 42, 0.86);
+  --overlay: rgba(4, 7, 13, 0.62);
+  --hero-grad: linear-gradient(135deg, #1b3a46 0%, #24305f 100%);
+
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --fs-xs: 0.75rem; --fs-sm: 0.8125rem; --fs-md: 0.9375rem; --fs-lg: 1.125rem;
+  --fs-xl: 1.5rem; --fs-2xl: 1.875rem;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+  --r-sm: 8px; --r-md: 14px; --r-lg: 20px; --r-pill: 999px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --nav-h: 68px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --sidebar-w: 268px;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f5fa;
+  --bg-elev: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f0f3f9;
+  --surface-3: #e4e9f3;
+  --border: rgba(15, 23, 42, 0.1);
+  --border-strong: rgba(15, 23, 42, 0.22);
+  --text: #0f172a;
+  --text-muted: #4d5a70;
+  --text-faint: #7a869b;
+  --accent: #0c8f78;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(12, 143, 120, 0.11);
+  --accent-2: #4650c9;
+  --accent-2-soft: rgba(70, 80, 201, 0.1);
+  --danger: #c7283f;
+  --danger-soft: rgba(199, 40, 63, 0.09);
+  --warn: #9a5b00;
+  --warn-soft: rgba(154, 91, 0, 0.1);
+  --success: #167a42;
+  --success-soft: rgba(22, 122, 66, 0.1);
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.07);
+  --shadow-2: 0 14px 44px rgba(15, 23, 42, 0.18);
+  --nav-bg: rgba(255, 255, 255, 0.9);
+  --overlay: rgba(15, 23, 42, 0.42);
+  --hero-grad: linear-gradient(135deg, #d9f3ec 0%, #dde2ff 100%);
+}
