@@ -11,6 +11,7 @@ import { createAuthService } from '../../../src/services/auth.js';
 import { bootstrapAdmin } from '../../../src/services/adminBootstrap.js';
 import { loadConfig } from '../../../src/config/index.js';
 import { runStoreContract } from '../helpers/store-contract.js';
+import { runAssignmentsContract } from '../helpers/assignments-contract.js';
 
 const url = process.env.TEST_DATABASE_URL; const skip = !url && 'set TEST_DATABASE_URL to run';
 const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'src', 'database', 'migrations');
@@ -31,6 +32,7 @@ after(async () => { if (!shared) return; await shared.pool.end(); await shared.s
 
 // Same behavioural contract as the in-memory store (tests/backend/store.memory.test.js).
 runStoreContract((name, fn) => test(name, { skip }, fn), 'postgres store', async () => ({ store: (await env()).store }));
+runAssignmentsContract((name, fn) => test(name, { skip }, fn), 'postgres store', async () => ({ store: (await env()).store }));
 
 test('failed-login counting is atomic under concurrency (no lost updates, lock is set)', { skip }, async () => {
   const { store } = await env(); const u = await store.createUser({ username: `race${Date.now() % 1e6}`, displayName: 'Race', role: 'admin', passwordHash: 'h' });
@@ -57,4 +59,13 @@ test('sessions are keyed by token hash and cascade with their user', { skip }, a
   const { store, pool } = await env(); const u = await store.createUser({ email: `cascade${Date.now() % 1e6}@example.org`, displayName: 'C', role: 'student' });
   const hash = Buffer.alloc(32, 7); await store.createSession({ userId: u.id, tokenHash: hash, kind: 'user', expiresAt: new Date(Date.now() + 3600e3) });
   await pool.query('DELETE FROM users WHERE id = $1', [u.id]); assert.equal(await store.findSessionByTokenHash(hash), null);
+});
+
+test('assignment constraints hold in the database itself (not just in the service layer)', { skip }, async () => {
+  const { store, pool } = await env(); const u = await store.createUser({ email: `c${Date.now() % 1e6}@example.org`, displayName: 'C', role: 'student' });
+  const bad = (sql, params, code) => assert.rejects(pool.query(sql, params), (e) => e.code === code, sql.slice(0, 60));
+  await bad("INSERT INTO personal_assignments (user_id, title, course, due_date, status) VALUES ($1, 'T', 'C', current_date, 'done')", [u.id], '23514');
+  await bad("INSERT INTO personal_assignments (user_id, title, course, due_date, priority) VALUES ($1, 'T', 'C', current_date, 'urgent')", [u.id], '23514');
+  await bad("INSERT INTO general_assignments (title, course, due_date, status) VALUES ('T', 'C', current_date, 'published')", [], '23514');
+  await bad("INSERT INTO attachments (storage_key, original_filename, content_type, size_bytes, checksum_sha256) VALUES (repeat('a', 32), 'x.pdf', 'application/pdf', 5, repeat('b', 64))", [], '23514');
 });

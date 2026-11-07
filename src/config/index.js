@@ -1,6 +1,8 @@
 // Environment parsing and validation. Pure: `loadConfig(env)` takes an env object so it is easy to test.
 // Fails fast with a readable list of problems; never prints secret values.
 import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 
 const LEVELS = ['debug', 'info', 'warn', 'error'];
@@ -67,6 +69,15 @@ export function loadConfig(env = process.env) {
     else { sessionSecret = randomBytes(48).toString('base64url'); ephemeralSecret = true; }
   }
 
+  // File storage. Local disk must be a persistent volume OUTSIDE the web root (public/), never served directly.
+  const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'public');
+  const storageDriver = env.STORAGE_DRIVER || 'local';
+  if (storageDriver !== 'local') problems.push('STORAGE_DRIVER must be "local" (object-store drivers are not included yet)');
+  if (isProd && !env.STORAGE_DIR) problems.push('STORAGE_DIR is required in production (an absolute path on a persistent volume)');
+  const storageDir = path.resolve(env.STORAGE_DIR || path.join(publicDir, '..', 'storage'));
+  if (storageDir === publicDir || storageDir.startsWith(publicDir + path.sep)) problems.push('STORAGE_DIR must not be inside public/ (files would be web-accessible)');
+  if (isProd && env.STORAGE_DIR && !path.isAbsolute(env.STORAGE_DIR)) problems.push('STORAGE_DIR must be an absolute path in production');
+
   const oauth = {};
   for (const name of ['google', 'github']) {
     const id = env[`${name.toUpperCase()}_CLIENT_ID`] || ''; const secret = env[`${name.toUpperCase()}_CLIENT_SECRET`] || '';
@@ -85,7 +96,7 @@ export function loadConfig(env = process.env) {
   return Object.freeze({
     env: nodeEnv, isProd, port, logLevel, timezone, trustProxy, appBaseUrl, warnings,
     adminUiEnabled: adminUi, origin, sessionSecret, ephemeralSecret, allowedEmailDomains: Object.freeze(allowedEmailDomains),
-    oauth: Object.freeze(oauth),
+    oauth: Object.freeze(oauth), storage: Object.freeze({ driver: storageDriver, dir: storageDir }),
     cookies: Object.freeze({ secure: secureCookies, sessionName: secureCookies ? '__Host-sid' : 'sid', oauthName: secureCookies ? '__Host-oauth' : 'oauth' }),
     // Session and lockout policy. Admin sessions are deliberately short.
     auth: Object.freeze({
@@ -107,5 +118,5 @@ export function loadEnvFile(file = '.env') {
 export function describeConfig(c) {
   let db = 'not configured';
   if (c.db.url) { try { const u = new URL(c.db.url); db = `${u.hostname}${u.port ? `:${u.port}` : ''}${u.pathname}`; } catch { db = 'configured'; } }
-  return { env: c.env, port: c.port, timezone: c.timezone, logLevel: c.logLevel, trustProxy: c.trustProxy, adminUi: c.adminUiEnabled, oauthProviders: Object.entries(c.oauth).filter(([, v]) => v.enabled).map(([k]) => k), allowedEmailDomains: c.allowedEmailDomains, database: db, dbSsl: c.db.ssl };
+  return { env: c.env, port: c.port, timezone: c.timezone, logLevel: c.logLevel, trustProxy: c.trustProxy, adminUi: c.adminUiEnabled, storage: `${c.storage.driver}:${c.storage.dir}`, oauthProviders: Object.entries(c.oauth).filter(([, v]) => v.enabled).map(([k]) => k), allowedEmailDomains: c.allowedEmailDomains, database: db, dbSsl: c.db.ssl };
 }

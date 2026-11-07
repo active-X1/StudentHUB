@@ -4,13 +4,14 @@ import { esc, fmtDate, dueLabel, daysUntil, debounce } from '../components/util.
 import { skeletonCards, errorState, emptyState, demoBanner } from '../components/states.js';
 import { openModal } from '../components/modal.js';
 import { showToast } from '../components/toast.js';
+import { isLive } from '../auth-client.js';
 
 export async function render(root) {
   let alive = true; let items = [];
   const state = { q: '', course: 'All', sort: 'deadline' };
   root.innerHTML = `<div class="page">
     <div class="page-head"><div><h1 tabindex="-1">General Assignments</h1><p>Shared coursework published by the department.</p></div></div>
-    ${demoBanner('Sample assignments. <b>Download buttons are placeholders</b>; no real files or server URLs exist in this prototype.')}
+    ${isLive() ? '' : demoBanner('Demo mode: sample assignments. <b>Download buttons are placeholders</b>; no real files exist.')}
     <div class="toolbar"><div class="toolbar-row"><div class="search">${icon('search')}<label class="sr-only" for="g-q">Search general assignments</label><input class="input" id="g-q" type="search" placeholder="Search title, course or #tag"></div>
       <label class="sr-only" for="g-sort">Sort</label><select class="select" id="g-sort" style="width:auto"><option value="deadline">Deadline</option><option value="newest">Newest published</option></select></div>
       <div class="chips" id="g-courses" role="group" aria-label="Filter by course"></div></div>
@@ -38,7 +39,7 @@ export async function render(root) {
   }
   function openDetails(a) {
     openModal({ title: a.title, content: `<dl class="detail-list" style="margin:0"><div><dt>Course</dt><dd>${esc(a.course)} · ${esc(a.category)}</dd></div><div><dt>Published</dt><dd>${fmtDate(a.published)}</dd></div><div><dt>Due</dt><dd>${fmtDate(a.due)} · ${dueLabel(a.due)}</dd></div><div><dt>Description</dt><dd>${esc(a.description)}</dd></div>
-      <div><dt>Attachments</dt><dd>${a.attachments.length ? a.attachments.map((f) => `<div class="file-item" style="margin-bottom:8px"><span class="file-thumb">${icon('file')}</span><div class="file-meta"><strong>${esc(f.name)}</strong><small>Placeholder — no real file</small></div><button class="btn btn-sm" data-dl>${icon('download')} Download</button></div>`).join('') : '<span class="muted">No attachments.</span>'}</dd></div></dl>`,
+      <div><dt>Attachments</dt><dd>${a.attachments.length ? a.attachments.map((f) => `<div class="file-item" style="margin-bottom:8px"><span class="file-thumb">${icon('file')}</span><div class="file-meta"><strong>${esc(f.name)}</strong><small>${f.id ? `${f.size ? `${Math.max(1, Math.round(f.size / 1024))} KB` : 'File'}` : 'Placeholder — no real file'}</small></div>${f.id ? `<a class="btn btn-sm" href="${esc(f.url)}" download>${icon('download')} Download</a>` : `<button class="btn btn-sm" data-dl>${icon('download')} Download</button>`}</div>`).join('') : '<span class="muted">No attachments.</span>'}</dd></div></dl>`,
       actions: [{ label: 'Close', variant: 'primary' }] }).body.addEventListener('click', (e) => { if (e.target.closest('[data-dl]')) showToast('Prototype placeholder: downloads need the backend and secure file storage.', 'info', 4200); });
   }
   root.addEventListener('click', (e) => {

@@ -2,6 +2,7 @@
 // Client-side checks are for user feedback only — the backend MUST validate content, size and ownership.
 import { esc, fmtSize } from './util.js';
 import { icon } from './icons.js';
+import { isLive } from '../auth-client.js';
 
 export const ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx';
 export const MAX_BYTES = 5 * 1024 * 1024;
@@ -11,12 +12,16 @@ const ext = (n) => n.split('.').pop().toLowerCase();
 export const isImage = (f) => /^image\//.test(f.type) || ['jpg', 'jpeg', 'png', 'webp'].includes(ext(f.name));
 
 export function thumbHTML(f) {
-  return `<span class="file-thumb">${f.url && isImage(f) ? `<img src="${f.url}" alt="">` : icon(isImage(f) ? 'image' : 'file')}</span>`;
+  const src = f.preview || f.url; // stored images use ?inline=1 so the server may display them; new files use a local blob: URL
+  return `<span class="file-thumb">${src && isImage(f) ? `<img src="${esc(src)}" alt="">` : icon(isImage(f) ? 'image' : 'file')}</span>`;
 }
-/** Read-only attachment chips for already-"saved" items (metadata only). */
+/** Attachment chips. Stored files (with an id) are real download links; demo-mode files are metadata only. */
 export function attachmentsHTML(list = []) {
   if (!list.length) return '';
-  return `<div class="attach-row">${list.map((f) => `<span class="attach" title="${esc(f.name)}">${thumbHTML(f)}<span>${esc(f.name)}${f.size ? ` · ${fmtSize(f.size)}` : ''}</span></span>`).join('')}</div>`;
+  return `<div class="attach-row">${list.map((f) => {
+    const inner = `${thumbHTML(f)}<span>${esc(f.name)}${f.size ? ` · ${fmtSize(f.size)}` : ''}</span>`;
+    return f.id && f.url ? `<a class="attach" href="${esc(f.url)}" download title="Download ${esc(f.name)}">${inner}</a>` : `<span class="attach" title="${esc(f.name)}">${inner}</span>`;
+  }).join('')}</div>`;
 }
 
 export function createFilePicker({ initial = [], onChange } = {}) {
@@ -28,7 +33,7 @@ export function createFilePicker({ initial = [], onChange } = {}) {
       <small class="muted">JPEG, PNG, WebP, PDF, DOC, DOCX · up to ${MAX_FILES} files, ${MAX_BYTES / 1048576} MB each</small>
       <input type="file" class="sr-only" multiple accept="${ACCEPT}" tabindex="-1">
     </label>
-    <p class="hint faint" style="font-size:var(--fs-xs);margin-top:6px">Prototype: files are previewed in your browser only and are <b>not uploaded or saved</b>. Real validation happens on the server in a later phase.</p>
+    <p class="hint faint" style="font-size:var(--fs-xs);margin-top:6px">${isLive() ? 'Files are uploaded when you save. The server checks each file\'s real type and size.' : 'Demo mode: files are previewed in your browser only and are <b>not uploaded or saved</b>.'}</p>
     <div class="alert error" role="alert" hidden></div>
     <ul class="file-list" aria-label="Selected files"></ul>`;
   const input = el.querySelector('input'); const zone = el.querySelector('.dropzone');
@@ -45,7 +50,7 @@ export function createFilePicker({ initial = [], onChange } = {}) {
       if (files.length >= MAX_FILES) { problems.push(`Maximum ${MAX_FILES} files.`); break; }
       if (!OK_EXT.includes(ext(f.name))) { problems.push(`“${f.name}” is not a supported type.`); continue; }
       if (f.size > MAX_BYTES) { problems.push(`“${f.name}” is larger than ${MAX_BYTES / 1048576} MB.`); continue; }
-      files.push({ name: f.name, size: f.size, type: f.type, url: isImage(f) ? URL.createObjectURL(f) : undefined });
+      files.push({ name: f.name, size: f.size, type: f.type, file: f, url: isImage(f) ? URL.createObjectURL(f) : undefined }); // `file` = new, not yet uploaded
     }
     err.hidden = !problems.length; err.textContent = problems.join(' ');
     paint();

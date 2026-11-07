@@ -9,11 +9,12 @@ export const isLive = () => current.mode === 'live' && current.authenticated ===
 export class ApiError extends Error {
   constructor(status, code, message, details) { super(message); this.name = 'ApiError'; this.status = status; this.code = code; this.details = details ?? {}; }
 }
-async function call(method, path, body) {
-  const headers = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+async function call(method, path, body, { raw, extraHeaders } = {}) {
+  const headers = { ...extraHeaders };
+  if (raw !== undefined) headers['Content-Type'] = 'application/octet-stream';
+  else if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (method !== 'GET' && csrfToken) headers['X-CSRF-Token'] = csrfToken;
-  const res = await fetch(`/api/v1${path}`, { method, credentials: 'same-origin', headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const res = await fetch(`/api/v1${path}`, { method, credentials: 'same-origin', headers, body: raw !== undefined ? raw : (body === undefined ? undefined : JSON.stringify(body)) });
   let data = null; try { data = await res.json(); } catch { /* not JSON: the static dev server answers 404 text */ }
   if (!res.ok) { const e = data?.error; throw new ApiError(res.status, e?.code ?? 'http_error', e?.message ?? `Request failed (${res.status})`, e?.details); }
   if (data?.csrfToken) csrfToken = data.csrfToken;
@@ -33,6 +34,10 @@ export async function getSession() {
   }
   return current;
 }
+/** Generic JSON call for other modules (CSRF header added automatically). */
+export const request = (method, path, body) => call(method, path, body);
+/** Uploads one file as raw bytes (the file name travels in a header, percent-encoded). Resolves with { attachment }. */
+export const uploadFile = (path, file) => call('POST', path, undefined, { raw: file, extraHeaders: { 'X-Filename': encodeURIComponent(file.name) } });
 export const register = (b) => call('POST', '/auth/register', b);
 export const login = (b) => call('POST', '/auth/login', b);
 export const adminLogin = (b) => call('POST', '/admin/auth/login', b);

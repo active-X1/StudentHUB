@@ -10,3 +10,5 @@ export const validationError = (details) => new AppError(422, 'validation_failed
 export const conflict = (code, message) => new AppError(409, code, message);
 export const tooManyRequests = (retryAfterSeconds, code = 'too_many_attempts', message = 'Too many attempts. Please try again later.') =>
   new AppError(429, code, message, { retryAfterSeconds }, { 'Retry-After': String(Math.max(1, Math.ceil(retryAfterSeconds))) });
+/** Thrown by storage drivers; callers decide whether it becomes a 404 or a 500. */
+export class NotFoundError extends Error { constructor(message = 'Not found') { super(message); this.name = 'NotFoundError'; } }

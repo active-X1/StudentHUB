@@ -1,8 +1,8 @@
 {
   "name": "student-hub",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "Student Hub for a Computer Science department — Phase 3: authentication, sessions and admin lockout on the Express + PostgreSQL foundation.",
+  "description": "Student Hub for a Computer Science department — Phase 4: persistent assignments and secure file storage on the Express + PostgreSQL foundation.",
   "type": "module",
   "license": "MIT",
   "engines": { "node": ">=20.12" },

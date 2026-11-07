@@ -1,5 +1,6 @@
 // In-memory implementation of the auth store, mirroring src/models/pgStore.js semantics (verified by store-contract.js).
 import { DuplicateError } from '../../../src/models/pgStore.js';
+import { createMemoryAssignments } from './memory-assignments.js';
 
 const ROLES = ['student', 'lecturer', 'admin'];
 const clone = (v) => structuredClone(v);
@@ -13,6 +14,7 @@ export function createMemoryStore() {
   const byUsername = (n) => [...users.values()].find((u) => u.username && n && u.username === String(n).toLowerCase()) ?? null;
 
   return {
+    ...createMemoryAssignments(),
     _audit: audit, _attempts: attempts, _sessions: sessions, _users: users,
     async findUserByEmail(email) { return view(byEmail(email)); },
     async findUserByUsername(username) { return view(byUsername(username)); },

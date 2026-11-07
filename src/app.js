@@ -17,7 +17,7 @@ export const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url))
 
 export function createApp({ config, db = null, logger, api: apiOptions = {} }) {
   const app = express();
-  const api = buildApi({ config, db, ...apiOptions });
+  const api = buildApi({ config, db, logger, ...apiOptions });
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
 

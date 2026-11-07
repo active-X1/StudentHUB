@@ -1,6 +1,6 @@
 # API plan
 
-**Implemented:** health (`/health`, `/health/ready`) and authentication (`/auth/*`, `/admin/auth/login`, `/admin/me`, see `docs/auth.md`). Everything else below is planned for later phases; forgot/reset password is deferred until email delivery exists. The database schema for all of it already exists (see `docs/database.md`).
+**Implemented:** health, authentication (`docs/auth.md`), and assignments + attachments (`docs/files.md`: `/me/assignments`, `/assignments`, `/admin/assignments`, `/attachments/:id`). Everything else below is planned for later phases; forgot/reset password is deferred until email delivery exists. The database schema for all of it already exists (see `docs/database.md`).
 
 Base path `/api/v1`, JSON, session cookies (httpOnly, Secure, SameSite). Every route validates input server-side and checks authorization server-side.
 

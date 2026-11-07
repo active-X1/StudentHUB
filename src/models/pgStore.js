@@ -22,7 +22,12 @@ export const toUser = (r) => r && ({
   lockedUntil: r.locked_until, lastLoginAt: r.last_login_at, createdAt: r.created_at, roles: r.role_names ?? [],
 });
 
-export function createPgStore(db) {
+import { createPgAssignments } from './pgAssignments.js';
+
+/** The full store: authentication + assignments/attachments. */
+export function createPgStore(db) { return { ...createAuthStore(db), ...createPgAssignments(db) }; }
+
+function createAuthStore(db) {
   const one = async (text, params) => (await db.query(text, params)).rows[0] ?? null;
   return {
     // ---- users ----

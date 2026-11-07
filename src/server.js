@@ -5,6 +5,7 @@ import { createDatabase } from './database/index.js';
 import { createApp } from './app.js';
 import { createPgStore } from './models/pgStore.js';
 import { startHousekeeping } from './services/housekeeping.js';
+import { createStorage } from './services/storage/index.js';
 
 loadEnvFile();
 let config;
@@ -20,7 +21,7 @@ const server = createApp({ config, db, logger }).listen(config.port, () => {
   if (!db) logger.warn('DATABASE_URL is not set: running without a database (readiness reports not_configured).');
 });
 
-const stopHousekeeping = db ? startHousekeeping({ store: createPgStore(db), logger }) : () => {};
+const stopHousekeeping = db ? startHousekeeping({ store: createPgStore(db), logger, storage: createStorage(config) }) : () => {};
 
 let stopping = false;
 async function shutdown(signal, code = 0) {

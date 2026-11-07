@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadConfig, ConfigError, describeConfig } from '../../src/config/index.js';
 
-const prodEnv = { NODE_ENV: 'production', DATABASE_URL: 'postgres://u:secretpw@db.internal:5432/hub', SESSION_SECRET: 'k'.repeat(40), APP_BASE_URL: 'https://hub.example.org' };
+const prodEnv = { NODE_ENV: 'production', DATABASE_URL: 'postgres://u:secretpw@db.internal:5432/hub', SESSION_SECRET: 'k'.repeat(40), APP_BASE_URL: 'https://hub.example.org', STORAGE_DIR: '/var/lib/student-hub' };
 
 test('defaults are safe for development', () => {
   const c = loadConfig({});

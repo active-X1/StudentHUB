@@ -7,17 +7,27 @@ import { skeletonCards, errorState, emptyState, demoBanner } from '../components
 import { openModal, confirmDialog } from '../components/modal.js';
 import { showToast } from '../components/toast.js';
 import { createFilePicker, attachmentsHTML } from '../components/file-preview.js';
+import { isLive } from '../auth-client.js';
 
 const PRIO = { high: ['danger', 'High'], medium: ['warn', 'Medium'], low: ['success', 'Low'] };
 const STATUS = { todo: 'To do', 'in-progress': 'In progress', done: 'Completed' };
 const FILTERS = [['all', 'All'], ['active', 'Active'], ['overdue', 'Overdue'], ['soon', 'Due soon'], ['done', 'Completed']];
+
+const FIELD = { title: 'title', course: 'course', dueDate: 'due' };
+/** Puts server validation messages next to their fields; anything else goes to a toast. Returns true if something was shown. */
+function showFieldErrors(form, details) {
+  const other = [];
+  for (const [k, msg] of Object.entries(details)) { const el = FIELD[k] && form.querySelector(`[data-err="${FIELD[k]}"]`); if (el) el.textContent = msg; else other.push(msg); }
+  if (other.length) showToast(other.join(' '), 'error', 6000);
+  return Object.keys(details).length > 0;
+}
 
 export async function render(root, ctx) {
   let alive = true; let items = [];
   const state = { filter: 'all', sort: 'due', q: '' };
   root.innerHTML = `<div class="page">
     <div class="page-head"><div><h1 tabindex="-1">My Assignments</h1><p>Your private to-do list for coursework.</p></div><button class="btn btn-primary btn-sm" id="new-a">${icon('plus')} New</button></div>
-    ${demoBanner('Sample data kept in <b>browser memory only</b>. It resets when you reload, and attachments are never uploaded or saved to cloud storage.')}
+    ${isLive() ? '' : demoBanner('Demo mode: sample data kept in <b>browser memory only</b>. It resets when you reload, and attachments are never uploaded.')}
     <div id="stats"></div>
     <div class="toolbar"><div class="toolbar-row"><div class="search">${icon('search')}<label class="sr-only" for="a-q">Search assignments</label><input class="input" id="a-q" type="search" placeholder="Search title, course or #tag"></div>
       <label class="sr-only" for="a-sort">Sort</label><select class="select" id="a-sort" style="width:auto"><option value="due">Due date</option><option value="priority">Priority</option><option value="title">Title</option></select></div>
@@ -84,10 +94,20 @@ export async function render(root, ctx) {
       if (Object.values(errs).some(Boolean)) { form.querySelector(`#f-${Object.keys(errs).find((k) => errs[k])}`).focus(); return false; }
       const payload = { ...v, tags: parseTags(v.tags), attachments: picker.getFiles() };
       try {
-        if (existing) { const n = await api.updateMyAssignment(existing.id, payload); items = items.map((x) => (x.id === n.id ? { ...x, ...payload } : x)); showToast('Assignment updated.', 'success'); }
-        else { const n = await api.createMyAssignment(payload); items.unshift({ ...n, ...payload }); storage.clearDraft('assignment'); showToast('Assignment added (sample data, not saved to a server).', 'success'); }
+        const live = isLive(); const problems = [];
+        let saved = existing ? await api.updateMyAssignment(existing.id, payload) : await api.createMyAssignment(payload);
+        if (live) { // files: remove the ones taken out, upload the new ones, then re-read the stored result
+          const kept = new Set(picker.getFiles().filter((f) => f.id).map((f) => f.id));
+          for (const old of existing?.attachments ?? []) if (!kept.has(old.id)) await api.deleteAttachment(old.id).catch((e) => problems.push(`${old.name}: ${e.message}`));
+          for (const f of picker.getFiles().filter((x) => x.file)) await api.uploadAttachment(saved.id, f.file).catch((e) => problems.push(`${f.name}: ${e.details?.file || e.message}`));
+          saved = await api.getMyAssignment(saved.id);
+          items = existing ? items.map((x) => (x.id === saved.id ? saved : x)) : [saved, ...items];
+        } else items = existing ? items.map((x) => (x.id === saved.id ? { ...x, ...payload } : x)) : [{ ...saved, ...payload }, ...items];
+        if (!existing) storage.clearDraft('assignment');
         paint();
-      } catch (e) { showToast(e.message, 'error'); return false; }
+        if (problems.length) showToast(`Saved, but some files were not accepted: ${problems.join('; ')}`, 'error', 8000);
+        else showToast(existing ? 'Assignment updated.' : (live ? 'Assignment saved.' : 'Assignment added (demo data, not saved to a server).'), 'success');
+      } catch (e) { if (e.details && showFieldErrors(form, e.details)) return false; showToast(e.status === 429 ? 'Too many changes. Please wait a bit.' : e.message, 'error'); return false; }
     } }] });
   }
 

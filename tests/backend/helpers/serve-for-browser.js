@@ -5,7 +5,9 @@ import { startMiniApp } from './mini-app.js';
 import { createMemoryStore } from './memory-store.js';
 import { addStudent, addAdmin, FAST } from './setup.js';
 
-const store = createMemoryStore(); await addStudent({ store }); await addAdmin({ store }, { mustChangePassword: true });
+const store = createMemoryStore(); await addStudent({ store }); await addAdmin({ store }, { mustChangePassword: !process.env.NO_FORCE_CHANGE });
+await addStudent({ store }, { email: 'bob@example.org', name: 'Bob Roe' });
 const fetchFn = async (url) => ({ ok: true, status: 200, json: async () => (String(url).includes('token') ? { access_token: 't' } : { sub: 'g-1', email: 'g@example.org', email_verified: true, name: 'G User' }) });
 const app = await startMiniApp({ store, hasherParams: FAST, fetchFn, env: { GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'gsecret', SERVER_TIMEZONE: 'UTC' } });
 console.log(`URL ${app.url}`);
+console.log(`STORAGE ${app.storageDir}`);

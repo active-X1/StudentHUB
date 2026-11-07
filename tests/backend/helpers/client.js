@@ -20,11 +20,12 @@ export function request(baseUrl, method, path, { json, headers = {}, jar, origin
     const h = { ...(origin && method !== 'GET' ? { Origin: new URL(baseUrl).origin } : {}), ...(body ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } : {}), ...headers };
     if (jar?.cookies.size) h.Cookie = jar.header();
     const req = http.request(url, { method, headers: h }, (res) => {
-      let data = ''; res.on('data', (c) => { data += c; });
+      const chunks = []; res.on('data', (c) => chunks.push(c));
       res.on('end', () => {
+        const buffer = Buffer.concat(chunks); const data = buffer.toString('utf8');
         const setCookies = res.headers['set-cookie'] ?? []; jar?.absorb(setCookies);
         let parsed = data; try { parsed = JSON.parse(data); } catch { /* keep text */ }
-        resolve({ status: res.statusCode, headers: res.headers, body: parsed, setCookies });
+        resolve({ status: res.statusCode, headers: res.headers, body: parsed, buffer, setCookies });
       });
     });
     req.on('error', reject); if (body) req.write(body); req.end();

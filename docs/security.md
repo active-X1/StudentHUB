@@ -2,14 +2,15 @@
 
 ## What is real and what is not (Phase 3)
 **Real when the API runs** (details in [auth.md](auth.md)): password and OAuth sign-in, server-side sessions, CSRF defences, password change with server-side verification, the admin bootstrap, forced first-login password change, the persisted 3-attempt admin lockout, and server-side admin authorization.
-**Still not real:** the content of the admin dashboard and student pages (sample data); file "uploads" (previewed in the browser only); forgot-password and email verification (need email delivery); in **demo mode** (no API) every sign-in/password screen is visual only and says so.
+**Also real (Phase 4):** assignments and file uploads/downloads with per-user authorization (see [files.md](files.md)).
+**Still not real:** feeds and the other admin sections (sample data); forgot-password and email verification (need email delivery); in **demo mode** (no API) every sign-in/password/upload screen is visual only and says so.
 
 ## Rules (now implemented unless marked)
 - **Admin bootstrap.** Initial username `admin`; no default password exists in the repository; created once by CLI with a policy-checked password, hashed with scrypt, flagged must-change; the CLI refuses to run if an admin exists. *Not yet:* MFA.
 - **Admin lockout.** Three consecutive wrong passwords lock the account until the next calendar day in `SERVER_TIMEZONE`, persisted in PostgreSQL (survives restarts, devices, cleared storage, IP changes), reset on success or expiry, with IP throttling, audit entries, and uniform responses that never reveal whether a username exists.
 - **Password change.** The server verifies the old password, enforces strength and confirmation, throttles guessing, and revokes the user's other sessions.
 - **Admin access.** Every admin API route requires the admin role and an admin-kind session; the dashboard code is only sent to admin sessions.
-- **Uploads (Phase 4).** Validate file content (not just extension/MIME) and size, generate random storage keys, use persistent object storage, and verify ownership on every read so one student can never fetch another's private attachment by changing an ID or URL.
+- **Uploads.** Implemented: type decided by file content, size/count limits, random storage keys (the file name never touches a path), downloads forced to attachment with `nosniff` and a sandboxing CSP, and ownership checked on every read (other users get 404). *Not yet:* object-storage driver, malware scanning.
 - **Secrets.** `.env` is git-ignored; `.env.example` holds placeholders only; `SESSION_SECRET` is required in production.
 
 ## PWA and caching
@@ -34,3 +35,10 @@
 - **OAuth:** state cookie, PKCE (Google), exact redirect URIs, verified email only, no automatic account linking.
 - **Service worker:** never caches API responses or anything admin-related; sign-out clears runtime caches and local prototype data.
 - **Verification limits:** the Express wiring and the PostgreSQL SQL are exercised by tests that need `npm install` / `TEST_DATABASE_URL`; in this repo's default `npm test` run they are skipped, and the same route table and middleware are tested through a Node HTTP harness.
+
+## Phase 4 additions
+- **IDOR resistance:** personal-assignment SQL filters by `user_id`; attachment access goes through one `authorize` function; unknown, malformed and forbidden ids are indistinguishable (404). Tests cover other students, admins, and unpublished states.
+- **Mass assignment:** request bodies are read through explicit whitelists; ownership, ids and timestamps come only from the session/server.
+- **Upload hardening:** magic-byte detection, extension must match, no SVG/HTML, polyglot-resistant PDF check, zip entries inspected but never extracted, 5 MiB limit enforced by the body parser and the validator, raw-body uploads (no multipart parser), CSRF token required, rate limited per user.
+- **Storage:** private directory outside the web root, 0600/0700 permissions, atomic writes, path-traversal-proof keys, orphan sweeper.
+- **Injection:** `ORDER BY` only from fixed maps, `LIKE` wildcards escaped, everything else parameterised (static SQL tests include an injection probe).

@@ -62,7 +62,7 @@ async function openDashboard(session) {
     mod.mount({
       root: app, user: session.user,
       signOut: async () => { await client.logout(); await boot(); },
-      changePassword: client.changePassword,
+      changePassword: client.changePassword, request: client.request, uploadFile: client.uploadFile,
     });
     // If the server ends the session (idle timeout, suspension, password change elsewhere) return to sign-in.
     clearInterval(watcher);

@@ -13,6 +13,10 @@ import { cookieParser } from '../../../src/middleware/cookies.js';
 import { errorHandler, notFoundHandler } from '../../../src/middleware/errorHandler.js';
 import { notFound } from '../../../src/utils/errors.js';
 import { requestId } from '../../../src/middleware/requestId.js';
+import { MAX_BYTES } from '../../../src/services/fileType.js';
+import { createLocalStorage } from '../../../src/services/storage/local.js';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { buildCspDirectives, cspHeaderValue } from '../../../src/config/csp.js';
 
 const PUBLIC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'public');
@@ -38,6 +42,13 @@ function runChain(handlers, req, res, done) {
   };
   next();
 }
+const compile = (p) => { const names = []; const re = new RegExp(`^${p.replace(/:([A-Za-z]+)/g, (_, n) => { names.push(n); return '([^/]+)'; })}$`); return { re, names }; };
+async function readRaw(req) {
+  const chunks = []; let size = 0;
+  for await (const c of req) { size += c.length; if (size <= MAX_BYTES) chunks.push(c); }
+  if (size > MAX_BYTES) throw Object.assign(new Error('too large'), { type: 'entity.too.large' });
+  return /^application\/octet-stream/i.test(req.headers['content-type'] || '') ? Buffer.concat(chunks) : undefined;
+}
 async function readJson(req) {
   const chunks = []; let size = 0;
   for await (const c of req) { size += c.length; if (size <= 100 * 1024) chunks.push(c); } // keep draining so the client can read our 413
@@ -54,7 +65,10 @@ export async function startMiniApp({ env = {}, ...opts } = {}) {
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const port = server.address().port;
   const config = loadConfig({ NODE_ENV: 'test', SESSION_SECRET: 's'.repeat(48), APP_BASE_URL: `http://127.0.0.1:${port}`, ...env });
-  const api = buildApi({ config, ...opts });
+  const storageDir = opts.storageDir ?? mkdtempSync(path.join(tmpdir(), 'hub-storage-'));
+  const storage = opts.storage ?? createLocalStorage({ dir: storageDir });
+  const api = buildApi({ config, ...opts, storage });
+  const routes = api.routes.map((r) => ({ ...r, ...compile(r.path) }));
   const logger = silent; const onError = errorHandler(logger);
   const gate = adminUiGate(config);
   const guard = adminDashboardGuard({ cookieParser, loadSession: api.postBody[1] ?? ((req, res, next) => { req.auth = null; next(); }) });
@@ -66,9 +80,10 @@ export async function startMiniApp({ env = {}, ...opts } = {}) {
     try {
       if (urlObj.pathname.startsWith('/api/v1')) {
         const rel = urlObj.pathname.slice('/api/v1'.length) || '/'; decorate(req, res, urlObj, rel); res.setHeader('Cache-Control', 'no-store');
-        const pre = [...api.preBody, async (rq, rs, nx) => { try { rq.body = await readJson(rq); nx(); } catch (e) { nx(e); } }];
-        const route = api.routes.find((r) => r.method.toUpperCase() === req.method && r.path === rel);
-        return runChain([requestId, ...pre, ...api.postBody, ...(route ? route.handlers : [(rq, rs, nx) => nx(notFound('API route not found'))])], req, res, finish);
+        let route = null; req.params = {};
+        for (const r of routes) { const m = r.method.toUpperCase() === req.method && r.re.exec(rel); if (m) { route = r; r.names.forEach((n, i) => { req.params[n] = decodeURIComponent(m[i + 1]); }); break; } }
+        const read = async (rq, rs, nx) => { try { rq.body = route?.body === 'raw' ? await readRaw(rq) : await readJson(rq); nx(); } catch (e) { nx(e); } };
+        return runChain([requestId, ...api.preBody, read, ...api.postBody, ...(route ? route.handlers : [(rq, rs, nx) => nx(notFound('API route not found'))])], req, res, finish);
       }
       decorate(req, res, urlObj, urlObj.pathname);
       return runChain([requestId, gate, guard, async (rq, rs, nx) => { // static files (decoded like express.static does)
@@ -81,5 +96,5 @@ export async function startMiniApp({ env = {}, ...opts } = {}) {
       }, notFoundHandler], req, res, finish);
     } catch (e) { return finish(e); }
   };
-  return { url: `http://127.0.0.1:${port}`, config, services: api.services, close: () => new Promise((r) => server.close(r)) };
+  return { url: `http://127.0.0.1:${port}`, config, services: api.services, storage, storageDir, close: () => new Promise((r) => server.close(r)) };
 }

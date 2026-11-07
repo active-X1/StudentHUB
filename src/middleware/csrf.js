@@ -23,6 +23,10 @@ export function requireJsonBody(req, res, next) {
   if (hasBody && !/^application\/json(\s*;|$)/i.test(req.get('content-type') || '')) return next(new AppError(415, 'unsupported_media_type', 'Send JSON with Content-Type: application/json.'));
   return next();
 }
+/** Like requireJsonBody, but lets binary uploads (application/octet-stream) through on the given path patterns. */
+export function requireJsonBodyExcept(rawPathPatterns) {
+  return (req, res, next) => (rawPathPatterns.some((re) => re.test(req.path)) && /^application\/octet-stream\s*$/i.test(req.get('content-type') || '') ? next() : requireJsonBody(req, res, next));
+}
 const csrfFailed = () => new AppError(403, 'csrf_failed', 'Your session could not be verified. Reload the page and try again.');
 export function csrfProtect(req, res, next) {
   if (!req.auth) return next(unauthorized());

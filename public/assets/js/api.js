@@ -35,6 +35,15 @@ const db = {
   posts: clone(mock.posts), suggestions: [], myAssignments: clone(mock.myAssignments), generalAssignments: clone(mock.generalAssignments),
 };
 const empty = () => demoState() === 'empty';
+const isImageType = (t) => /^image\//.test(t || '');
+const mapAttachment = (f) => ({ id: f.id, name: f.name, size: f.size, type: f.contentType, url: f.url, preview: isImageType(f.contentType) ? `${f.url}?inline=1` : undefined });
+const fromPersonal = (a) => ({ id: a.id, title: a.title, description: a.description, course: a.course, lecturer: a.lecturer || '', due: a.dueDate, priority: a.priority, status: a.status, tags: a.tags, attachments: a.attachments.map(mapAttachment) });
+const fromGeneral = (a) => ({ id: a.id, title: a.title, course: a.course, category: a.category, description: a.description, published: a.publishedAt, due: a.dueDate, tags: a.tags, status: a.status ?? 'published', attachments: a.attachments.map(mapAttachment) });
+/** Page shape -> API shape. Only keys that are present are sent, so partial updates (e.g. just `status`) stay partial. */
+const PERSONAL_KEYS = ['title', 'description', 'course', 'lecturer', 'priority', 'status', 'tags'];
+const toPersonalPayload = (p) => { const o = {}; for (const k of PERSONAL_KEYS) if (k in p) o[k] = k === 'lecturer' ? (p[k] || null) : p[k]; if ('due' in p) o.dueDate = p.due; return o; };
+export const toGeneralPayload = (p) => { const o = {}; for (const k of ['title', 'course', 'category', 'description', 'status', 'tags']) if (k in p) o[k] = p[k]; if ('due' in p) o.dueDate = p.due; return o; };
+export { fromGeneral };
 const liveUser = () => (authClient.isLive() ? authClient.currentSession().user : null);
 
 export const api = {
@@ -54,13 +63,17 @@ export const api = {
   addComment: (id, text) => simulate(() => { const c = { id: uid('c'), author: db.user.name, text, date: new Date().toISOString() }; db.posts.find((x) => x.id === id).comments.push(c); return c; }, 150),
 
   // GET/POST/PATCH/DELETE /me/assignments  (private; server must enforce ownership on every call)
-  listMyAssignments: () => simulate(() => empty() ? [] : db.myAssignments),
-  createMyAssignment: (a) => simulate(() => { const n = { id: uid('m'), ...a }; db.myAssignments.unshift(n); return n; }, 250),
-  updateMyAssignment: (id, patch) => simulate(() => { const i = db.myAssignments.findIndex((x) => x.id === id); db.myAssignments[i] = { ...db.myAssignments[i], ...patch }; return db.myAssignments[i]; }, 200),
-  deleteMyAssignment: (id) => simulate(() => { db.myAssignments = db.myAssignments.filter((x) => x.id !== id); return { ok: true }; }, 200),
+  listMyAssignments: () => (liveUser() ? authClient.request('GET', '/me/assignments?limit=200&sort=due').then((r) => r.items.map(fromPersonal)) : simulate(() => empty() ? [] : db.myAssignments)),
+  getMyAssignment: (id) => authClient.request('GET', `/me/assignments/${encodeURIComponent(id)}`).then((r) => fromPersonal(r.assignment)),
+  createMyAssignment: (a) => (liveUser() ? authClient.request('POST', '/me/assignments', toPersonalPayload(a)).then((r) => fromPersonal(r.assignment)) : simulate(() => { const n = { id: uid('m'), ...a }; db.myAssignments.unshift(n); return n; }, 250)),
+  updateMyAssignment: (id, patch) => (liveUser() ? authClient.request('PATCH', `/me/assignments/${encodeURIComponent(id)}`, toPersonalPayload(patch)).then((r) => fromPersonal(r.assignment)) : simulate(() => { const i = db.myAssignments.findIndex((x) => x.id === id); db.myAssignments[i] = { ...db.myAssignments[i], ...patch }; return db.myAssignments[i]; }, 200)),
+  deleteMyAssignment: (id) => (liveUser() ? authClient.request('DELETE', `/me/assignments/${encodeURIComponent(id)}`) : simulate(() => { db.myAssignments = db.myAssignments.filter((x) => x.id !== id); return { ok: true }; }, 200)),
+  // POST /me/assignments/:id/attachments (raw bytes); DELETE /attachments/:id
+  uploadAttachment: (id, file) => authClient.uploadFile(`/me/assignments/${encodeURIComponent(id)}/attachments`, file),
+  deleteAttachment: (id) => authClient.request('DELETE', `/attachments/${encodeURIComponent(id)}`),
 
   // GET /assignments (published by admins)
-  listGeneralAssignments: () => simulate(() => empty() ? [] : db.generalAssignments.filter((a) => a.status === 'published')),
+  listGeneralAssignments: () => (liveUser() ? authClient.request('GET', '/assignments?limit=200&sort=deadline').then((r) => r.items.map(fromGeneral)) : simulate(() => empty() ? [] : db.generalAssignments.filter((a) => a.status === 'published'))),
 
   // GET/PATCH /me
   // Live mode: the real signed-in user. Everything else on these pages is still sample data until its phase.
